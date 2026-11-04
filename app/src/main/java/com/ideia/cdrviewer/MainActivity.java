@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Intent;
 import android.net.Uri;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -33,7 +35,8 @@ public class MainActivity extends Activity {
   @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==1&&result==RESULT_OK&&data!=null)load(data.getData());}
   private void load(Uri uri){try{
     String mime=getContentResolver().getType(uri);String name=uri.toString().toLowerCase(Locale.ROOT);
-    if(name.endsWith(".cdr")||(mime!=null&&mime.toLowerCase(Locale.ROOT).contains("coreldraw"))){
+    try(Cursor cursor=getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){if(cursor!=null&&cursor.moveToFirst()){int idx=cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);if(idx>=0)name=cursor.getString(idx).toLowerCase(Locale.ROOT);}}
+    if(name.endsWith(".cdr")||(mime!=null&&(mime.toLowerCase(Locale.ROOT).contains("coreldraw")||mime.toLowerCase(Locale.ROOT).contains("zip")))){
       bitmap=readCdrPreview(uri);
       if(bitmap==null){status.setText("CDR reconhecido, mas não foi encontrada prévia PNG compatível. Renderização vetorial ainda indisponível.");preview.setImageDrawable(null);return;}
       preview.setImageBitmap(bitmap);
