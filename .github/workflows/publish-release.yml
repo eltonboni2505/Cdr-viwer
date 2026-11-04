@@ -1,0 +1,40 @@
+name: Publish signed APK
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Verify signing secrets
+        env:
+          CDR_KEYSTORE_BASE64: ${{ secrets.CDR_KEYSTORE_BASE64 }}
+          CDR_KEYSTORE_PASSWORD: ${{ secrets.CDR_KEYSTORE_PASSWORD }}
+          CDR_KEY_ALIAS: ${{ secrets.CDR_KEY_ALIAS }}
+          CDR_KEY_PASSWORD: ${{ secrets.CDR_KEY_PASSWORD }}
+        run: |
+          test -n "$CDR_KEYSTORE_BASE64" && test -n "$CDR_KEYSTORE_PASSWORD" && test -n "$CDR_KEY_ALIAS" && test -n "$CDR_KEY_PASSWORD" || { echo "Configure the four CDR signing secrets first"; exit 1; }
+          printf '%s' "$CDR_KEYSTORE_BASE64" | base64 --decode > release.keystore
+      - name: Build signed APK
+        env:
+          CDR_KEYSTORE_FILE: release.keystore
+          CDR_KEYSTORE_PASSWORD: ${{ secrets.CDR_KEYSTORE_PASSWORD }}
+          CDR_KEY_ALIAS: ${{ secrets.CDR_KEY_ALIAS }}
+          CDR_KEY_PASSWORD: ${{ secrets.CDR_KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/app-release.apk --title "CDR Viewer $GITHUB_REF_NAME" --notes "Atualização do CDR Viewer para Android."
