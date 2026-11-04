@@ -27,10 +27,13 @@ public class MainActivity extends Activity {
     status=new TextView(this);status.setText("Abra um CDR para visualizar a prévia incorporada e compartilhar em PNG. A prévia pode ter baixa resolução.");root.addView(status);
     Button open=new Button(this);open.setText("Abrir arquivo");root.addView(open);
     Button share=new Button(this);share.setText("Compartilhar PNG no WhatsApp");root.addView(share);
+    Button update=new Button(this);update.setText("Verificar atualizações");root.addView(update);
+    update.setOnClickListener(v->new UpdateManager(this).check(true));
     preview=new ImageView(this);preview.setAdjustViewBounds(true);root.addView(preview,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
     open.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,1);});
     share.setOnClickListener(v->sharePng());
     Intent i=getIntent();if(i!=null){Uri u=i.getParcelableExtra(Intent.EXTRA_STREAM);if(u==null)u=i.getData();if(u!=null)load(u);}
+    new UpdateManager(this).check(false);
   }
   @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==1&&result==RESULT_OK&&data!=null)load(data.getData());}
   private void load(Uri uri){try{
