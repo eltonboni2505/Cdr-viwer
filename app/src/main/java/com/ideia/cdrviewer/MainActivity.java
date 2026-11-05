@@ -34,6 +34,9 @@ public class MainActivity extends Activity {
     Button b=new Button(this);b.setText(s);b.setTextColor(TEXT);b.setAllCaps(false);b.setTextSize(13);b.setBackground(shape(color,14));b.setPadding(dp(8),0,dp(8),0);return b;
   }
   private LinearLayout toolbar;
+  private android.widget.FrameLayout root;
+  private LinearLayout home;
+  private String currentFile="Arquivo CDR";
   private void toggleControls(){toolbar.setVisibility(toolbar.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);}
   private void fullscreen(){
     getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
@@ -41,7 +44,7 @@ public class MainActivity extends Activity {
   }
   @Override public void onCreate(Bundle saved){super.onCreate(saved);
     fullscreen();
-    android.widget.FrameLayout root=new android.widget.FrameLayout(this);root.setBackgroundColor(Color.BLACK);
+    root=new android.widget.FrameLayout(this);root.setBackgroundColor(Color.BLACK);
     preview=new ZoomImageView(this);root.addView(preview,new android.widget.FrameLayout.LayoutParams(-1,-1));
     toolbar=new LinearLayout(this);toolbar.setOrientation(1);toolbar.setPadding(dp(14),dp(18),dp(14),dp(18));toolbar.setBackgroundColor(0xD9121926);
     android.widget.FrameLayout.LayoutParams barParams=new android.widget.FrameLayout.LayoutParams(-1,-2,android.view.Gravity.BOTTOM);
@@ -61,6 +64,7 @@ public class MainActivity extends Activity {
     LinearLayout.LayoutParams op=new LinearLayout.LayoutParams(0,dp(52),1);op.setMargins(0,dp(8),dp(6),0);actions.addView(open,op);
     LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,dp(52),1);sp.setMargins(dp(6),dp(8),0,0);actions.addView(share,sp);
     toolbar.addView(actions);
+    buildHome();
     setContentView(root);
     preview.setGalleryGestures(this::toggleControls,delta->showPage(pageIndex+delta));
     update.setOnClickListener(v->new UpdateManager(this).check(true));
@@ -70,10 +74,26 @@ public class MainActivity extends Activity {
     Intent i=getIntent();if(i!=null){Uri u=i.getParcelableExtra(Intent.EXTRA_STREAM);if(u==null)u=i.getData();if(u!=null)load(u);}
     new UpdateManager(this).check(false);
   }
+  private void buildHome(){
+    home=new LinearLayout(this);home.setOrientation(1);home.setGravity(android.view.Gravity.CENTER);
+    home.setPadding(dp(28),dp(24),dp(28),dp(24));home.setBackgroundColor(BG);
+    TextView mark=label("◉",70,0xFF84F600,true);mark.setGravity(android.view.Gravity.CENTER);home.addView(mark);
+    TextView brand=label("Ver.cdr",35,TEXT,true);brand.setGravity(android.view.Gravity.CENTER);home.addView(brand);
+    TextView subtitle=label("Visualizador de arquivos CDR",14,MUTED,false);subtitle.setGravity(android.view.Gravity.CENTER);home.addView(subtitle);
+    Button open=action("▣   Abrir arquivo CDR",0xFF168B43);
+    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(66));lp.setMargins(0,dp(50),0,dp(14));home.addView(open,lp);
+    Button updates=action("↻   Verificar atualizações",SURFACE);home.addView(updates,new LinearLayout.LayoutParams(-1,dp(52)));
+    TextView hint=label("Offline  •  Zoom  •  Compartilhar PNG",12,MUTED,false);hint.setGravity(android.view.Gravity.CENTER);
+    LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(24),0,0);home.addView(hint,hp);
+    root.addView(home,new android.widget.FrameLayout.LayoutParams(-1,-1));
+    open.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,1);});
+    updates.setOnClickListener(v->new UpdateManager(this).check(true));
+  }
   @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==1&&result==RESULT_OK&&data!=null)load(data.getData());}
   private void load(Uri uri){try{
     String mime=getContentResolver().getType(uri);String name=uri.toString().toLowerCase(Locale.ROOT);
     try(Cursor cursor=getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){if(cursor!=null&&cursor.moveToFirst()){int idx=cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);if(idx>=0)name=cursor.getString(idx).toLowerCase(Locale.ROOT);}}
+    currentFile=name.substring(name.lastIndexOf("/") + 1);
     if(name.endsWith(".cdr")||(mime!=null&&(mime.toLowerCase(Locale.ROOT).contains("coreldraw")||mime.toLowerCase(Locale.ROOT).contains("zip")))){
       pages.clear();pages.addAll(readCdrPreviews(uri));
       bitmap=pages.isEmpty()?null:pages.get(0);
@@ -92,6 +112,7 @@ public class MainActivity extends Activity {
     if(index<0||index>=pages.size())return;
     pageIndex=index;bitmap=pages.get(index);preview.setImageBitmap(bitmap);
     pageStatus.setText("Página "+(index+1)+" de "+pages.size());
+    if(home!=null)home.setVisibility(View.GONE);
     toolbar.setVisibility(View.GONE);
   }
   private java.util.ArrayList<Bitmap> readCdrPreviews(Uri uri) throws IOException {
