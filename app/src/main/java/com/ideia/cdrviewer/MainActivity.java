@@ -22,19 +22,46 @@ import androidx.core.content.FileProvider;
 public class MainActivity extends Activity {
   private ZoomImageView preview; private TextView status,pageStatus; private Bitmap bitmap;
   private final java.util.ArrayList<Bitmap> pages=new java.util.ArrayList<>();private int pageIndex=0;
-  @Override public void onCreate(Bundle b) { super.onCreate(b);
-    LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(20,30,20,20);
-    TextView title=new TextView(this);title.setText("CDR Viewer · Offline");title.setTextSize(23);root.addView(title);
-    status=new TextView(this);status.setText("Abra um CDR para visualizar a prévia incorporada e compartilhar em PNG. A prévia pode ter baixa resolução.");root.addView(status);
-    Button open=new Button(this);open.setText("Abrir arquivo");root.addView(open);
-    Button share=new Button(this);share.setText("Compartilhar PNG no WhatsApp");root.addView(share);
-    Button update=new Button(this);update.setText("Verificar atualizações");root.addView(update);
-    update.setOnClickListener(v->new UpdateManager(this).check(true));
+  private static final int BG=Color.rgb(12,17,29),SURFACE=Color.rgb(25,33,49),ACCENT=Color.rgb(71,139,255),TEXT=Color.WHITE,MUTED=Color.rgb(165,177,196);
+  private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
+  private android.graphics.drawable.GradientDrawable shape(int color,int radius){
+    android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;
+  }
+  private TextView label(String s,int size,int color,boolean bold){
+    TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);if(bold)t.setTypeface(null,1);return t;
+  }
+  private Button action(String s,int color){
+    Button b=new Button(this);b.setText(s);b.setTextColor(TEXT);b.setTextAllCaps(false);b.setTextSize(13);b.setBackground(shape(color,14));b.setPadding(dp(8),0,dp(8),0);return b;
+  }
+  @Override public void onCreate(Bundle saved){super.onCreate(saved);
+    getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
+    LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setBackgroundColor(BG);root.setPadding(dp(16),dp(16),dp(16),dp(12));
+    LinearLayout header=new LinearLayout(this);header.setGravity(android.view.Gravity.CENTER_VERTICAL);
+    LinearLayout heading=new LinearLayout(this);heading.setOrientation(1);
+    heading.addView(label("CDR Viewer",25,TEXT,true));
+    heading.addView(label("Visualizador de artes • Offline",12,MUTED,false));
+    header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+    Button update=action("↻  Atualizar",SURFACE);header.addView(update,new LinearLayout.LayoutParams(dp(112),dp(44)));
+    root.addView(header);
+    status=label("Abra uma arte para visualizar, ampliar e compartilhar.",12,MUTED,false);
+    LinearLayout.LayoutParams statusParams=new LinearLayout.LayoutParams(-1,-2);statusParams.setMargins(0,dp(12),0,dp(12));root.addView(status,statusParams);
+    android.widget.FrameLayout viewer=new android.widget.FrameLayout(this);viewer.setBackground(shape(SURFACE,20));viewer.setClipToOutline(true);
+    preview=new ZoomImageView(this);viewer.addView(preview,new android.widget.FrameLayout.LayoutParams(-1,-1));
+    TextView hint=label("✦  Amplie com dois dedos",12,MUTED,false);hint.setGravity(android.view.Gravity.CENTER);
+    android.widget.FrameLayout.LayoutParams hintParams=new android.widget.FrameLayout.LayoutParams(-1,dp(36),android.view.Gravity.BOTTOM);viewer.addView(hint,hintParams);
+    LinearLayout.LayoutParams viewerParams=new LinearLayout.LayoutParams(-1,0,1);viewerParams.setMargins(0,0,0,dp(12));root.addView(viewer,viewerParams);
     LinearLayout navigation=new LinearLayout(this);navigation.setGravity(android.view.Gravity.CENTER_VERTICAL);
-    Button previous=new Button(this);previous.setText("◀");navigation.addView(previous);
-    pageStatus=new TextView(this);pageStatus.setText("Nenhuma página");pageStatus.setGravity(android.view.Gravity.CENTER);navigation.addView(pageStatus,new LinearLayout.LayoutParams(0,-2,1));
-    Button next=new Button(this);next.setText("▶");navigation.addView(next);root.addView(navigation);
-    preview=new ZoomImageView(this);root.addView(preview,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
+    Button previous=action("‹",SURFACE);previous.setTextSize(24);navigation.addView(previous,new LinearLayout.LayoutParams(dp(58),dp(48)));
+    pageStatus=label("Nenhuma página",14,TEXT,true);pageStatus.setGravity(android.view.Gravity.CENTER);navigation.addView(pageStatus,new LinearLayout.LayoutParams(0,dp(48),1));
+    Button next=action("›",SURFACE);next.setTextSize(24);navigation.addView(next,new LinearLayout.LayoutParams(dp(58),dp(48)));
+    root.addView(navigation);
+    LinearLayout actions=new LinearLayout(this);actions.setOrientation(0);
+    Button open=action("＋  Abrir arquivo",ACCENT);
+    Button share=action("↗  Compartilhar PNG",SURFACE);
+    LinearLayout.LayoutParams p1=new LinearLayout.LayoutParams(0,dp(54),1);p1.setMargins(0,dp(12),dp(6),0);actions.addView(open,p1);
+    LinearLayout.LayoutParams p2=new LinearLayout.LayoutParams(0,dp(54),1);p2.setMargins(dp(6),dp(12),0,0);actions.addView(share,p2);
+    root.addView(actions);setContentView(root);
+    update.setOnClickListener(v->new UpdateManager(this).check(true));
     previous.setOnClickListener(v->showPage(pageIndex-1));next.setOnClickListener(v->showPage(pageIndex+1));
     open.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,1);});
     share.setOnClickListener(v->sharePng());
