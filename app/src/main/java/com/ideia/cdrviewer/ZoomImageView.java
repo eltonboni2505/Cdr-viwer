@@ -3,16 +3,34 @@ import android.content.Context;
 import android.graphics.Matrix;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
+import android.view.GestureDetector;
 import android.view.ScaleGestureDetector;
 import android.widget.ImageView;
 
 public class ZoomImageView extends ImageView {
   private final Matrix matrix=new Matrix();
   private final ScaleGestureDetector detector;
+  private final GestureDetector gestures;
+  private Runnable onTap;
+  private java.util.function.IntConsumer onSwipe;
+  public void setGalleryGestures(Runnable tap,java.util.function.IntConsumer swipe){onTap=tap;onSwipe=swipe;}
   private float scale=1f,lastX,lastY;
   private int pointers=0;
   public ZoomImageView(Context context){
     super(context);setScaleType(ScaleType.MATRIX);
+    gestures=new GestureDetector(context,new GestureDetector.SimpleOnGestureListener(){
+      @Override public boolean onDown(MotionEvent e){return true;}
+      @Override public boolean onSingleTapConfirmed(MotionEvent e){if(onTap!=null)onTap.run();return true;}
+      @Override public boolean onDoubleTap(MotionEvent e){reset();return true;}
+      @Override public boolean onFling(MotionEvent start,MotionEvent end,float velocityX,float velocityY){
+        if(scale>1.001f||start==null||end==null||onSwipe==null)return false;
+        float dx=end.getX()-start.getX(),dy=end.getY()-start.getY();
+        if(Math.abs(dx)>getWidth()*.13f&&Math.abs(dx)>Math.abs(dy)*1.4f&&Math.abs(velocityX)>350){
+          onSwipe.accept(dx<0?1:-1);return true;
+        }
+        return false;
+      }
+    });
     detector=new ScaleGestureDetector(context,new ScaleGestureDetector.SimpleOnScaleGestureListener(){
       @Override public boolean onScale(ScaleGestureDetector d){
         float next=Math.max(1f,Math.min(8f,scale*d.getScaleFactor()));
@@ -40,6 +58,7 @@ public class ZoomImageView extends ImageView {
   }
   @Override public boolean onTouchEvent(MotionEvent event){
     detector.onTouchEvent(event);
+    if(!detector.isInProgress()&&event.getPointerCount()==1)gestures.onTouchEvent(event);
     int action=event.getActionMasked();
     if(action==MotionEvent.ACTION_DOWN){lastX=event.getX();lastY=event.getY();pointers=1;return true;}
     if(action==MotionEvent.ACTION_POINTER_DOWN){pointers=2;return true;}
@@ -48,7 +67,7 @@ public class ZoomImageView extends ImageView {
       lastX=event.getX();lastY=event.getY();return true;
     }
     if(action==MotionEvent.ACTION_POINTER_UP){pointers=2;}
-    if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL){pointers=0;performClick();}
+    if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL){pointers=0;}
     return true;
   }
   @Override public boolean performClick(){super.performClick();return true;}
