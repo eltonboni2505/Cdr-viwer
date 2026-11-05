@@ -31,7 +31,7 @@ public class MainActivity extends Activity {
     TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);if(bold)t.setTypeface(null,1);return t;
   }
   private Button action(String s,int color){
-    Button b=new Button(this);b.setText(s);b.setTextColor(TEXT);b.setTextAllCaps(false);b.setTextSize(13);b.setBackground(shape(color,14));b.setPadding(dp(8),0,dp(8),0);return b;
+    Button b=new Button(this);b.setText(s);b.setTextColor(TEXT);b.setAllCaps(false);b.setTextSize(13);b.setBackground(shape(color,14));b.setPadding(dp(8),0,dp(8),0);return b;
   }
   @Override public void onCreate(Bundle saved){super.onCreate(saved);
     getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
