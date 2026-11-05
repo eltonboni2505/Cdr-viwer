@@ -20,8 +20,8 @@ jobs:
           gradle-version: '8.10.2'
       - name: Build experimental debug APK
         run: gradle assembleDebug --no-daemon
-      - name: Publish experimental release v0.2
+      - name: Publish experimental release v0.3
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create v0.2 app/build/outputs/apk/debug/app-debug.apk --title "CDR Viewer v0.2 (experimental)" --notes "Versão experimental. APK debug assinado automaticamente pelo GitHub Actions. Não garante atualização sobre versões instaladas anteriormente ou futuras. Para atualizações permanentes, configurar assinatura estável." --prerelease
+          gh release create v0.3 app/build/outputs/apk/debug/app-debug.apk --title "CDR Viewer v0.3 (experimental)" --notes "Versão experimental. APK debug assinado automaticamente pelo GitHub Actions. Não garante atualização sobre versões instaladas anteriormente ou futuras. Para atualizações permanentes, configurar assinatura estável." --prerelease
