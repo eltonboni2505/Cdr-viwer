@@ -22,7 +22,7 @@ import androidx.core.content.FileProvider;
 public class MainActivity extends Activity {
   private ZoomImageView preview; private TextView status,pageStatus; private Bitmap bitmap;
   private final java.util.ArrayList<Bitmap> pages=new java.util.ArrayList<>();private int pageIndex=0;
-  private static final int BG=Color.rgb(12,17,29),SURFACE=Color.rgb(25,33,49),ACCENT=Color.rgb(71,139,255),TEXT=Color.WHITE,MUTED=Color.rgb(165,177,196);
+  private static final int BG=Color.rgb(5,9,8),SURFACE=Color.rgb(23,28,26),ACCENT=Color.rgb(80,235,0),TEXT=Color.WHITE,MUTED=Color.rgb(165,177,196);
   private int dp(float n){return (int)(n*getResources().getDisplayMetrics().density+.5f);}
   private android.graphics.drawable.GradientDrawable shape(int color,int radius){
     android.graphics.drawable.GradientDrawable d=new android.graphics.drawable.GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;
@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
   private LinearLayout home;
   private String currentFile="Arquivo CDR";
   private void toggleControls(){toolbar.setVisibility(toolbar.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);}
+  private void openPicker(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,1);}
   private void fullscreen(){
     getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
     getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
@@ -46,11 +47,11 @@ public class MainActivity extends Activity {
     fullscreen();
     root=new android.widget.FrameLayout(this);root.setBackgroundColor(Color.BLACK);
     preview=new ZoomImageView(this);root.addView(preview,new android.widget.FrameLayout.LayoutParams(-1,-1));
-    toolbar=new LinearLayout(this);toolbar.setOrientation(1);toolbar.setPadding(dp(14),dp(18),dp(14),dp(18));toolbar.setBackgroundColor(0xD9121926);
+    toolbar=new LinearLayout(this);toolbar.setOrientation(1);toolbar.setPadding(dp(14),dp(10),dp(14),dp(14));toolbar.setBackgroundColor(0xE609100C);
     android.widget.FrameLayout.LayoutParams barParams=new android.widget.FrameLayout.LayoutParams(-1,-2,android.view.Gravity.BOTTOM);
     root.addView(toolbar,barParams);
     LinearLayout top=new LinearLayout(this);top.setGravity(android.view.Gravity.CENTER_VERTICAL);
-    TextView title=label("CDR Viewer",19,TEXT,true);top.addView(title,new LinearLayout.LayoutParams(0,dp(44),1));
+    TextView title=label("Ver.cdr",19,TEXT,true);top.addView(title,new LinearLayout.LayoutParams(0,dp(44),1));
     Button update=action("↻",SURFACE);top.addView(update,new LinearLayout.LayoutParams(dp(50),dp(44)));
     toolbar.addView(top);
     status=label("Toque para ocultar os controles",12,MUTED,false);toolbar.addView(status);
@@ -60,7 +61,7 @@ public class MainActivity extends Activity {
     Button next=action("›",SURFACE);next.setTextSize(24);nav.addView(next,new LinearLayout.LayoutParams(dp(56),dp(48)));
     toolbar.addView(nav);
     LinearLayout actions=new LinearLayout(this);
-    Button open=action("＋  Abrir",ACCENT);Button share=action("↗  PNG",SURFACE);
+    Button open=action("＋  Abrir CDR",ACCENT);Button share=action("↗  Compartilhar PNG",SURFACE);
     LinearLayout.LayoutParams op=new LinearLayout.LayoutParams(0,dp(52),1);op.setMargins(0,dp(8),dp(6),0);actions.addView(open,op);
     LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,dp(52),1);sp.setMargins(dp(6),dp(8),0,0);actions.addView(share,sp);
     toolbar.addView(actions);
@@ -75,18 +76,51 @@ public class MainActivity extends Activity {
     new UpdateManager(this).check(false);
   }
   private void buildHome(){
-    home=new LinearLayout(this);home.setOrientation(1);home.setGravity(android.view.Gravity.CENTER);
-    home.setPadding(dp(28),dp(24),dp(28),dp(24));home.setBackgroundColor(BG);
-    TextView mark=label("◉",70,0xFF84F600,true);mark.setGravity(android.view.Gravity.CENTER);home.addView(mark);
-    TextView brand=label("Ver.cdr",35,TEXT,true);brand.setGravity(android.view.Gravity.CENTER);home.addView(brand);
-    TextView subtitle=label("Visualizador de arquivos CDR",14,MUTED,false);subtitle.setGravity(android.view.Gravity.CENTER);home.addView(subtitle);
-    Button open=action("▣   Abrir arquivo CDR",0xFF168B43);
-    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(66));lp.setMargins(0,dp(50),0,dp(14));home.addView(open,lp);
-    Button updates=action("↻   Verificar atualizações",SURFACE);home.addView(updates,new LinearLayout.LayoutParams(-1,dp(52)));
-    TextView hint=label("Offline  •  Zoom  •  Compartilhar PNG",12,MUTED,false);hint.setGravity(android.view.Gravity.CENTER);
-    LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(0,dp(24),0,0);home.addView(hint,hp);
+    home=new LinearLayout(this);
+    home.setOrientation(1);
+    home.setGravity(android.view.Gravity.CENTER);
+    home.setPadding(dp(26),dp(20),dp(26),dp(20));
+    home.setBackgroundColor(BG);
+
+    // The launcher drawable is a temporary fallback until the approved PNG is added as a resource.
+    ImageView brandIcon=new ImageView(this);
+    brandIcon.setImageResource(getResources().getIdentifier("vercdr_icon","drawable",getPackageName()));
+    brandIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    LinearLayout.LayoutParams iconParams=new LinearLayout.LayoutParams(dp(200),dp(200));
+    iconParams.gravity=android.view.Gravity.CENTER;
+    home.addView(brandIcon,iconParams);
+
+    TextView brand=label("Ver.cdr",35,TEXT,true);
+    brand.setGravity(android.view.Gravity.CENTER);
+    home.addView(brand);
+    TextView subtitle=label("VISUALIZADOR DE CDR",12,ACCENT,true);
+    subtitle.setLetterSpacing(.22f);
+    subtitle.setGravity(android.view.Gravity.CENTER);
+    LinearLayout.LayoutParams subtitleParams=new LinearLayout.LayoutParams(-1,-2);
+    subtitleParams.setMargins(0,dp(4),0,0);
+    home.addView(subtitle,subtitleParams);
+
+    TextView description=label("Abra e visualize seus arquivos do CorelDRAW no celular.",16,TEXT,false);
+    description.setGravity(android.view.Gravity.CENTER);
+    LinearLayout.LayoutParams descriptionParams=new LinearLayout.LayoutParams(-1,-2);
+    descriptionParams.setMargins(0,dp(42),0,dp(28));
+    home.addView(description,descriptionParams);
+
+    Button open=action("▣   Abrir arquivo CDR",ACCENT);
+    open.setTextColor(Color.BLACK);
+    home.addView(open,new LinearLayout.LayoutParams(-1,dp(60)));
+    Button updates=action("↻   Verificar atualizações",SURFACE);
+    LinearLayout.LayoutParams updatesParams=new LinearLayout.LayoutParams(-1,dp(52));
+    updatesParams.setMargins(0,dp(12),0,0);
+    home.addView(updates,updatesParams);
+
+    TextView hint=label("Deslize entre páginas  •  Amplie com dois dedos",12,MUTED,false);
+    hint.setGravity(android.view.Gravity.CENTER);
+    LinearLayout.LayoutParams hintParams=new LinearLayout.LayoutParams(-1,-2);
+    hintParams.setMargins(0,dp(34),0,0);
+    home.addView(hint,hintParams);
     root.addView(home,new android.widget.FrameLayout.LayoutParams(-1,-1));
-    open.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,1);});
+    open.setOnClickListener(v->openPicker());
     updates.setOnClickListener(v->new UpdateManager(this).check(true));
   }
   @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==1&&result==RESULT_OK&&data!=null)load(data.getData());}
