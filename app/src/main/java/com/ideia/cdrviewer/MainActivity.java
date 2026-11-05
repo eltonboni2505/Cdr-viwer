@@ -116,20 +116,21 @@ public class MainActivity extends Activity {
     toolbar.setVisibility(View.GONE);
   }
   private java.util.ArrayList<Bitmap> readCdrPreviews(Uri uri) throws IOException {
-    java.util.ArrayList<Bitmap> found=new java.util.ArrayList<>();
+    java.util.TreeMap<Integer,Bitmap> numbered=new java.util.TreeMap<>();
     try(InputStream raw=getContentResolver().openInputStream(uri);ZipInputStream zip=new ZipInputStream(new BufferedInputStream(raw))){
       ZipEntry entry;
       while((entry=zip.getNextEntry())!=null){
         String n=entry.getName().toLowerCase(Locale.ROOT);
-        if(!entry.isDirectory()&&n.startsWith("previews/")&&n.endsWith(".png")){
+        java.util.regex.Matcher pageMatch=java.util.regex.Pattern.compile("^previews/page([1-9][0-9]*)\\.png$").matcher(n);
+        if(!entry.isDirectory()&&pageMatch.matches()){
           ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buf=new byte[8192];int count;boolean oversized=false;
           while((count=zip.read(buf))!=-1){if(bytes.size()+count>16_000_000){oversized=true;break;}bytes.write(buf,0,count);}
-          if(!oversized){byte[] data=bytes.toByteArray();Bitmap candidate=BitmapFactory.decodeByteArray(data,0,data.length);if(candidate!=null)found.add(candidate);}
+          if(!oversized){byte[] data=bytes.toByteArray();Bitmap candidate=BitmapFactory.decodeByteArray(data,0,data.length);if(candidate!=null)numbered.put(Integer.parseInt(pageMatch.group(1)),candidate);}
         }
         zip.closeEntry();
       }
     }
-    return found;
+    return new java.util.ArrayList<>(numbered.values());
   }
   private void sharePng(){if(bitmap==null){Toast.makeText(this,"Abra primeiro uma imagem ou PDF compatível",Toast.LENGTH_LONG).show();return;}
     try{File f=new File(getCacheDir(),"arte-compartilhada.png");try(FileOutputStream out=new FileOutputStream(f)){bitmap.compress(Bitmap.CompressFormat.PNG,100,out);}
