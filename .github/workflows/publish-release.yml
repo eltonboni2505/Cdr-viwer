@@ -1,12 +1,13 @@
-name: Publish signed APK
+name: Publish experimental APK
 on:
-  workflow_dispatch:
   push:
-    tags: ['v*']
+    paths:
+      - '.github/workflows/publish-release.yml'
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,24 +18,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Verify signing secrets
-        env:
-          CDR_KEYSTORE_BASE64: ${{ secrets.CDR_KEYSTORE_BASE64 }}
-          CDR_KEYSTORE_PASSWORD: ${{ secrets.CDR_KEYSTORE_PASSWORD }}
-          CDR_KEY_ALIAS: ${{ secrets.CDR_KEY_ALIAS }}
-          CDR_KEY_PASSWORD: ${{ secrets.CDR_KEY_PASSWORD }}
-        run: |
-          test -n "$CDR_KEYSTORE_BASE64" && test -n "$CDR_KEYSTORE_PASSWORD" && test -n "$CDR_KEY_ALIAS" && test -n "$CDR_KEY_PASSWORD" || { echo "Configure the four CDR signing secrets first"; exit 1; }
-          printf '%s' "$CDR_KEYSTORE_BASE64" | base64 --decode > release.keystore
-      - name: Build signed APK
-        env:
-          CDR_KEYSTORE_FILE: release.keystore
-          CDR_KEYSTORE_PASSWORD: ${{ secrets.CDR_KEYSTORE_PASSWORD }}
-          CDR_KEY_ALIAS: ${{ secrets.CDR_KEY_ALIAS }}
-          CDR_KEY_PASSWORD: ${{ secrets.CDR_KEY_PASSWORD }}
-        run: gradle assembleRelease --no-daemon
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Build experimental debug APK
+        run: gradle assembleDebug --no-daemon
+      - name: Publish experimental release v0.2
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/app-release.apk --title "CDR Viewer $GITHUB_REF_NAME" --notes "Atualização do CDR Viewer para Android."
+        run: |
+          gh release create v0.2 app/build/outputs/apk/debug/app-debug.apk --title "CDR Viewer v0.2 (experimental)" --notes "Versão experimental. APK debug assinado automaticamente pelo GitHub Actions. Não garante atualização sobre versões instaladas anteriormente ou futuras. Para atualizações permanentes, configurar assinatura estável." --prerelease
