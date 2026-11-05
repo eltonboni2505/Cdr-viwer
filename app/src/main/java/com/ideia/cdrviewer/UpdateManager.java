@@ -15,7 +15,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public final class UpdateManager {
-  private static final String API="https://api.github.com/repos/eltonboni2505/Cdr-viwer/releases/latest";
+  private static final String API="https://api.github.com/repos/eltonboni2505/Cdr-viwer/releases?per_page=10";
   private final Activity activity;
   public UpdateManager(Activity activity){this.activity=activity;}
   public void check(boolean manual){
@@ -24,7 +24,7 @@ public final class UpdateManager {
         HttpURLConnection conn=(HttpURLConnection)new URL(API).openConnection();
         conn.setConnectTimeout(10000);conn.setReadTimeout(15000);conn.setRequestProperty("Accept","application/vnd.github+json");conn.setRequestProperty("User-Agent","CDRViewer-Android");
         if(conn.getResponseCode()!=200){conn.disconnect();if(manual)notice("Ainda não há uma versão publicada em Releases.");return;}
-        JSONObject release;try(InputStream in=conn.getInputStream()){release=new JSONObject(read(in,300000));}finally{conn.disconnect();}
+        JSONObject release;try(InputStream in=conn.getInputStream()){JSONArray list=new JSONArray(read(in,300000));release=null;for(int k=0;k<list.length();k++){JSONObject item=list.getJSONObject(k);if(!item.optBoolean("draft",false)){release=item;break;}}}finally{conn.disconnect();}if(release==null){if(manual)notice("Ainda não há uma versão publicada em Releases.");return;}
         int remote=0;String tag=release.optString("tag_name","");
         if(tag.startsWith("v"))tag=tag.substring(1);
         String[] nums=tag.split("\\.");
