@@ -1,9 +1,9 @@
-name: Publish experimental APK
+name: Publish signed Ver.cdr APK
 on:
-  push:
-    paths:
-      - '.github/workflows/publish-release.yml'
   workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
 permissions:
   contents: write
 jobs:
@@ -15,17 +15,61 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: Build experimental debug APK
-        run: gradle assembleDebug --no-daemon
-      - name: Publish experimental release v0.7
+      - name: Verify signing secrets and version
+        env:
+          KEYSTORE_B64: ${{ secrets.CDR_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.CDR_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CDR_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.CDR_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" && test -n "$STORE_PASS" && test -n "$KEY_ALIAS" && test -n "$KEY_PASS"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/v}"
+            grep -Fq "versionName = \"$TAG\"" app/build.gradle.kts || { echo "Tag and app versionName differ"; exit 1; }
+          fi
+      - name: Decode private signing keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.CDR_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/vercdr-release.jks"
+          chmod 600 "$RUNNER_TEMP/vercdr-release.jks"
+          echo "CDR_KEYSTORE_FILE=$RUNNER_TEMP/vercdr-release.jks" >> "$GITHUB_ENV"
+      - name: Build signed release APK
+        env:
+          CDR_KEYSTORE_PASSWORD: ${{ secrets.CDR_KEYSTORE_PASSWORD }}
+          CDR_KEY_ALIAS: ${{ secrets.CDR_KEY_ALIAS }}
+          CDR_KEY_PASSWORD: ${{ secrets.CDR_KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon
+      - name: Validate APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$APKSIGNER" verify --verbose "$APK"
+      - name: Upload signed APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VerCDR-signed-release
+          path: app/build/outputs/apk/release/app-release.apk
+      - name: Publish GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          gh release create v0.7 app/build/outputs/apk/debug/app-debug.apk --title "CDR Viewer v0.7 (experimental)" --notes "Versão experimental. APK debug assinado automaticamente pelo GitHub Actions. Não garante atualização sobre versões instaladas anteriormente ou futuras. Para atualizações permanentes, configurar assinatura estável." --prerelease
-
-# Rebuild after Android UI compilation fix
-
-# Include Ver.cdr launcher icon and home screen
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" app/build/outputs/apk/release/app-release.apk --title "Ver.cdr $GITHUB_REF_NAME" --notes "APK assinado com a chave permanente. Atualização sobre versões anteriores exige mesma assinatura e versionCode crescente." --prerelease
+      - name: Remove temporary keystore
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/vercdr-release.jks"
