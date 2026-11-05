@@ -25,3 +25,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create v0.5 app/build/outputs/apk/debug/app-debug.apk --title "CDR Viewer v0.5 (experimental)" --notes "Versão experimental. APK debug assinado automaticamente pelo GitHub Actions. Não garante atualização sobre versões instaladas anteriormente ou futuras. Para atualizações permanentes, configurar assinatura estável." --prerelease
+
+# Rebuild after Android UI compilation fix
