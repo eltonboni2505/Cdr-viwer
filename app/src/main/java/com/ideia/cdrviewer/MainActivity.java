@@ -33,34 +33,36 @@ public class MainActivity extends Activity {
   private Button action(String s,int color){
     Button b=new Button(this);b.setText(s);b.setTextColor(TEXT);b.setAllCaps(false);b.setTextSize(13);b.setBackground(shape(color,14));b.setPadding(dp(8),0,dp(8),0);return b;
   }
-  @Override public void onCreate(Bundle saved){super.onCreate(saved);
+  private LinearLayout toolbar;
+  private void toggleControls(){toolbar.setVisibility(toolbar.getVisibility()==View.VISIBLE?View.GONE:View.VISIBLE);}
+  private void fullscreen(){
+    getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
     getWindow().setStatusBarColor(BG);getWindow().setNavigationBarColor(BG);
-    LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setBackgroundColor(BG);root.setPadding(dp(16),dp(16),dp(16),dp(12));
-    LinearLayout header=new LinearLayout(this);header.setGravity(android.view.Gravity.CENTER_VERTICAL);
-    LinearLayout heading=new LinearLayout(this);heading.setOrientation(1);
-    heading.addView(label("CDR Viewer",25,TEXT,true));
-    heading.addView(label("Visualizador de artes • Offline",12,MUTED,false));
-    header.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-    Button update=action("↻  Atualizar",SURFACE);header.addView(update,new LinearLayout.LayoutParams(dp(112),dp(44)));
-    root.addView(header);
-    status=label("Abra uma arte para visualizar, ampliar e compartilhar.",12,MUTED,false);
-    LinearLayout.LayoutParams statusParams=new LinearLayout.LayoutParams(-1,-2);statusParams.setMargins(0,dp(12),0,dp(12));root.addView(status,statusParams);
-    android.widget.FrameLayout viewer=new android.widget.FrameLayout(this);viewer.setBackground(shape(SURFACE,20));viewer.setClipToOutline(true);
-    preview=new ZoomImageView(this);viewer.addView(preview,new android.widget.FrameLayout.LayoutParams(-1,-1));
-    TextView hint=label("✦  Amplie com dois dedos",12,MUTED,false);hint.setGravity(android.view.Gravity.CENTER);
-    android.widget.FrameLayout.LayoutParams hintParams=new android.widget.FrameLayout.LayoutParams(-1,dp(36),android.view.Gravity.BOTTOM);viewer.addView(hint,hintParams);
-    LinearLayout.LayoutParams viewerParams=new LinearLayout.LayoutParams(-1,0,1);viewerParams.setMargins(0,0,0,dp(12));root.addView(viewer,viewerParams);
-    LinearLayout navigation=new LinearLayout(this);navigation.setGravity(android.view.Gravity.CENTER_VERTICAL);
-    Button previous=action("‹",SURFACE);previous.setTextSize(24);navigation.addView(previous,new LinearLayout.LayoutParams(dp(58),dp(48)));
-    pageStatus=label("Nenhuma página",14,TEXT,true);pageStatus.setGravity(android.view.Gravity.CENTER);navigation.addView(pageStatus,new LinearLayout.LayoutParams(0,dp(48),1));
-    Button next=action("›",SURFACE);next.setTextSize(24);navigation.addView(next,new LinearLayout.LayoutParams(dp(58),dp(48)));
-    root.addView(navigation);
-    LinearLayout actions=new LinearLayout(this);actions.setOrientation(0);
-    Button open=action("＋  Abrir arquivo",ACCENT);
-    Button share=action("↗  Compartilhar PNG",SURFACE);
-    LinearLayout.LayoutParams p1=new LinearLayout.LayoutParams(0,dp(54),1);p1.setMargins(0,dp(12),dp(6),0);actions.addView(open,p1);
-    LinearLayout.LayoutParams p2=new LinearLayout.LayoutParams(0,dp(54),1);p2.setMargins(dp(6),dp(12),0,0);actions.addView(share,p2);
-    root.addView(actions);setContentView(root);
+  }
+  @Override public void onCreate(Bundle saved){super.onCreate(saved);
+    fullscreen();
+    android.widget.FrameLayout root=new android.widget.FrameLayout(this);root.setBackgroundColor(Color.BLACK);
+    preview=new ZoomImageView(this);root.addView(preview,new android.widget.FrameLayout.LayoutParams(-1,-1));
+    toolbar=new LinearLayout(this);toolbar.setOrientation(1);toolbar.setPadding(dp(14),dp(18),dp(14),dp(18));toolbar.setBackgroundColor(0xD9121926);
+    android.widget.FrameLayout.LayoutParams barParams=new android.widget.FrameLayout.LayoutParams(-1,-2,android.view.Gravity.BOTTOM);
+    root.addView(toolbar,barParams);
+    LinearLayout top=new LinearLayout(this);top.setGravity(android.view.Gravity.CENTER_VERTICAL);
+    TextView title=label("CDR Viewer",19,TEXT,true);top.addView(title,new LinearLayout.LayoutParams(0,dp(44),1));
+    Button update=action("↻",SURFACE);top.addView(update,new LinearLayout.LayoutParams(dp(50),dp(44)));
+    toolbar.addView(top);
+    status=label("Toque para ocultar os controles",12,MUTED,false);toolbar.addView(status);
+    LinearLayout nav=new LinearLayout(this);nav.setGravity(android.view.Gravity.CENTER_VERTICAL);
+    Button previous=action("‹",SURFACE);previous.setTextSize(24);nav.addView(previous,new LinearLayout.LayoutParams(dp(56),dp(48)));
+    pageStatus=label("Nenhuma página",14,TEXT,true);pageStatus.setGravity(android.view.Gravity.CENTER);nav.addView(pageStatus,new LinearLayout.LayoutParams(0,dp(48),1));
+    Button next=action("›",SURFACE);next.setTextSize(24);nav.addView(next,new LinearLayout.LayoutParams(dp(56),dp(48)));
+    toolbar.addView(nav);
+    LinearLayout actions=new LinearLayout(this);
+    Button open=action("＋  Abrir",ACCENT);Button share=action("↗  PNG",SURFACE);
+    LinearLayout.LayoutParams op=new LinearLayout.LayoutParams(0,dp(52),1);op.setMargins(0,dp(8),dp(6),0);actions.addView(open,op);
+    LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(0,dp(52),1);sp.setMargins(dp(6),dp(8),0,0);actions.addView(share,sp);
+    toolbar.addView(actions);
+    setContentView(root);
+    preview.setGalleryGestures(this::toggleControls,delta->showPage(pageIndex+delta));
     update.setOnClickListener(v->new UpdateManager(this).check(true));
     previous.setOnClickListener(v->showPage(pageIndex-1));next.setOnClickListener(v->showPage(pageIndex+1));
     open.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,1);});
@@ -90,6 +92,7 @@ public class MainActivity extends Activity {
     if(index<0||index>=pages.size())return;
     pageIndex=index;bitmap=pages.get(index);preview.setImageBitmap(bitmap);
     pageStatus.setText("Página "+(index+1)+" de "+pages.size());
+    toolbar.setVisibility(View.GONE);
   }
   private java.util.ArrayList<Bitmap> readCdrPreviews(Uri uri) throws IOException {
     java.util.ArrayList<Bitmap> found=new java.util.ArrayList<>();
