@@ -2,7 +2,7 @@ plugins { id("com.android.application") }
 android {
  namespace = "com.ideia.cdrviewer"
  compileSdk = 35
- defaultConfig { applicationId = "com.ideia.cdrviewer"; minSdk = 26; targetSdk = 28; versionCode = 2; versionName = "0.2" }
+ defaultConfig { applicationId = "com.ideia.cdrviewer"; minSdk = 26; targetSdk = 28; versionCode = 3; versionName = "0.3" }
  signingConfigs {
    create("releaseKey") {
      val storeFilePath=System.getenv("CDR_KEYSTORE_FILE")
